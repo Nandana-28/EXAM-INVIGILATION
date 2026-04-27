@@ -1,0 +1,9 @@
+path: ./datasets/proctorx
+train: images/train
+val: images/val
+test: images/test
+
+names:
+  0: person
+  1: phone
+  2: paper

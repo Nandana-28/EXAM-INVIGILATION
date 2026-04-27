@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ProctorX</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <section id="landing" class="landing">
+      <div class="landing__shade"></div>
+      <div class="landing__content">
+        <p class="eyebrow">ProctorX</p>
+        <h1>Welcome to ProctorX - An AI Exam Invigilation Platform</h1>
+        <p class="landing__copy">Stable identity tracking, focused exam alerts, and final-session analytics for institutional monitoring.</p>
+        <button id="getStarted" class="button button--primary">Get Started</button>
+      </div>
+    </section>
+
+    <div id="appShell" class="app-shell hidden">
+      <aside class="sidebar">
+        <div class="brand">
+          <span class="brand__mark">PX</span>
+          <span>ProctorX</span>
+        </div>
+        <nav class="nav" aria-label="Primary">
+          <button class="nav__item active" data-page="dashboard">Dashboard</button>
+          <button class="nav__item" data-page="upload">Upload Video</button>
+          <button class="nav__item" data-page="live">Live Monitoring</button>
+          <button class="nav__item" data-page="logs">Logs</button>
+          <button class="nav__item" data-page="analytics">Analytics</button>
+        </nav>
+      </aside>
+
+      <main class="workspace">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Campus Dashboard</p>
+            <h2 id="pageTitle">Dashboard</h2>
+          </div>
+          <div class="session-controls">
+            <span id="sessionStatus" class="status-chip">Idle</span>
+            <button id="startLiveTop" class="button button--secondary">Start Live</button>
+            <button id="stopTop" class="button button--danger">STOP</button>
+          </div>
+        </header>
+
+        <section id="dashboard" class="page active">
+          <div class="dashboard-grid">
+            <section class="panel video-panel">
+              <div class="panel__header">
+                <div>
+                  <p class="eyebrow">Video Panel</p>
+                  <h3>Live or Uploaded Feed</h3>
+                </div>
+                <span class="legend"><span class="dot dot--green"></span>Student <span class="dot dot--red"></span>Invigilator</span>
+              </div>
+              <img id="videoStream" class="video-stream" src="/video_feed" alt="ProctorX processed video stream" />
+            </section>
+
+            <section class="panel alert-panel">
+              <div class="panel__header">
+                <div>
+                  <p class="eyebrow">Alert Panel</p>
+                  <h3>Real-Time Alerts</h3>
+                </div>
+              </div>
+              <div id="alertList" class="alert-list empty">No alerts yet.</div>
+            </section>
+          </div>
+
+          <section class="panel summary-panel">
+            <div class="panel__header">
+              <div>
+                <p class="eyebrow">Analytics Section</p>
+                <h3>Final Output</h3>
+              </div>
+              <span id="analyticsNote" class="muted">Graph is generated after STOP or completion.</span>
+            </div>
+            <div class="analytics-grid">
+              <canvas id="finalChart" width="720" height="280" aria-label="Final alert classification graph"></canvas>
+              <div class="risk-box">
+                <h4>Student-Wise Risk Score</h4>
+                <div id="riskScores" class="risk-list empty">No student identities locked yet.</div>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel log-panel">
+            <div class="panel__header">
+              <div>
+                <p class="eyebrow">Log Panel</p>
+                <h3>Date and Time Filter</h3>
+              </div>
+            </div>
+            <form id="logFilter" class="filter-row">
+              <label>Date <input id="logDate" type="date" required /></label>
+              <label>Start Time <input id="startTime" type="time" /></label>
+              <label>End Time <input id="endTime" type="time" /></label>
+              <button class="button button--secondary" type="submit">Filter Logs</button>
+            </form>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Student ID</th>
+                    <th>Activity Type</th>
+                    <th>Classification</th>
+                    <th>Confidence</th>
+                    <th>Timestamp</th>
+                  </tr>
+                </thead>
+                <tbody id="logTable">
+                  <tr><td colspan="5">Select a date to load logs.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <section id="upload" class="page">
+          <section class="panel upload-panel">
+            <div class="panel__header">
+              <div>
+                <p class="eyebrow">Upload Page</p>
+                <h3>Uploaded Video Processing</h3>
+              </div>
+            </div>
+            <form id="uploadForm" class="upload-form">
+              <label class="file-drop">
+                <span>Upload video file</span>
+                <input id="videoFile" type="file" accept="video/mp4,video/avi,video/quicktime,video/x-matroska,video/webm" />
+              </label>
+              <button class="button button--primary" type="submit">Start Processing</button>
+            </form>
+          </section>
+        </section>
+
+        <section id="live" class="page">
+          <section class="panel">
+            <div class="panel__header">
+              <div>
+                <p class="eyebrow">Live Monitoring</p>
+                <h3>Webcam Session</h3>
+              </div>
+              <div class="session-controls">
+                <button id="startLivePage" class="button button--primary">Start Live</button>
+                <button id="stopLivePage" class="button button--danger">STOP</button>
+              </div>
+            </div>
+            <img class="video-stream video-stream--wide" src="/video_feed" alt="Live monitoring stream" />
+          </section>
+        </section>
+
+        <section id="logs" class="page">
+          <section class="panel">
+            <div class="panel__header">
+              <div>
+                <p class="eyebrow">Logs</p>
+                <h3>Filtered Activity Records</h3>
+              </div>
+            </div>
+            <form id="logFilterSecondary" class="filter-row">
+              <label>Date <input id="logDateSecondary" type="date" required /></label>
+              <label>Start Time <input id="startTimeSecondary" type="time" /></label>
+              <label>End Time <input id="endTimeSecondary" type="time" /></label>
+              <button class="button button--secondary" type="submit">Filter Logs</button>
+            </form>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Student ID</th>
+                    <th>Activity Type</th>
+                    <th>Classification</th>
+                    <th>Confidence</th>
+                    <th>Timestamp</th>
+                  </tr>
+                </thead>
+                <tbody id="logTableSecondary">
+                  <tr><td colspan="5">Select a date to load logs.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <section id="analytics" class="page">
+          <section class="panel">
+            <div class="panel__header">
+              <div>
+                <p class="eyebrow">Analytics</p>
+                <h3>Final Exam Summary</h3>
+              </div>
+              <button id="refreshResults" class="button button--secondary">Refresh Results</button>
+            </div>
+            <div class="analytics-grid">
+              <canvas id="analyticsChart" width="720" height="280"></canvas>
+              <div id="finalSummary" class="summary-list"></div>
+            </div>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>
