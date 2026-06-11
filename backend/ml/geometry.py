@@ -49,6 +49,25 @@ def union_box(a: BBox, b: BBox) -> BBox:
     return min(a[0], b[0]), min(a[1], b[1]), max(a[2], b[2]), max(a[3], b[3])
 
 
+def expand_box(box: BBox, margin_x: float, margin_y: float, max_width: int | None = None, max_height: int | None = None) -> BBox:
+    x1, y1, x2, y2 = box
+    expanded = x1 - margin_x, y1 - margin_y, x2 + margin_x, y2 + margin_y
+    if max_width is None or max_height is None:
+        return expanded
+    return (
+        max(0.0, expanded[0]),
+        max(0.0, expanded[1]),
+        min(float(max_width - 1), expanded[2]),
+        min(float(max_height - 1), expanded[3]),
+    )
+
+
+def intersects(a: BBox, b: BBox) -> bool:
+    ax1, ay1, ax2, ay2 = a
+    bx1, by1, bx2, by2 = b
+    return min(ax2, bx2) > max(ax1, bx1) and min(ay2, by2) > max(ay1, by1)
+
+
 def between(box: BBox, left: BBox, right: BBox, margin: float = 35.0) -> bool:
     cx, cy = center(box)
     lx, ly = center(left)

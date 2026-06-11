@@ -1,0 +1,10 @@
+#  cd "C:\Users\NANDANA\OneDrive\Documents\New project 2" code .
+
+#open docker         docker compose up -d postgres
+
+
+#    .\.venv\Scripts\Activate.ps1
+
+#    cd "C:\Users\NANDANA\OneDrive\Documents\New project 2" .\scripts\run_proctorx_8001.cmd
+
+

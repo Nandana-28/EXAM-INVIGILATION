@@ -199,6 +199,63 @@
               <div id="finalSummary" class="summary-list"></div>
             </div>
           </section>
+
+          <section class="panel">
+            <div class="panel__header">
+              <div>
+                <p class="eyebrow">ProctorX Model Evaluation</p>
+                <h3>Model Training Curves</h3>
+              </div>
+              <span id="modelMetricsNote" class="muted">Training metrics loaded from model evaluation data.</span>
+            </div>
+            <div class="model-chart-wide">
+              <canvas id="trainingCurveChart" width="980" height="380" aria-label="ProctorX model training curves"></canvas>
+            </div>
+          </section>
+
+          <div class="model-eval-grid">
+            <section class="panel">
+              <div class="panel__header">
+                <div>
+                  <p class="eyebrow">Validation</p>
+                  <h3>Confusion Matrix</h3>
+                </div>
+              </div>
+              <div class="model-chart-square">
+                <canvas id="confusionMatrixChart" width="620" height="500" aria-label="ProctorX confusion matrix"></canvas>
+              </div>
+            </section>
+
+            <section class="panel">
+              <div class="panel__header">
+                <div>
+                  <p class="eyebrow">Benchmark</p>
+                  <h3>Compare Models</h3>
+                </div>
+              </div>
+              <div class="model-chart-wide model-chart-wide--compact">
+                <canvas id="modelCompareChart" width="760" height="360" aria-label="ProctorX model comparison chart"></canvas>
+              </div>
+              <div class="table-wrap">
+                <table class="model-table">
+                  <thead>
+                    <tr>
+                      <th>Model</th>
+                      <th>mAP50</th>
+                      <th>Precision</th>
+                      <th>Recall</th>
+                      <th>Event F1</th>
+                      <th>ID Stability</th>
+                      <th>CPU FPS</th>
+                    </tr>
+                  </thead>
+                  <tbody id="modelCompareTable">
+                    <tr><td colspan="7">Loading model comparison...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </div>
         </section>
       </main>
     </div>

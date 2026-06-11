@@ -336,6 +336,33 @@ input {
   padding: 18px;
 }
 
+.model-eval-grid {
+  display: grid;
+  grid-template-columns: minmax(360px, 0.82fr) minmax(420px, 1.18fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.model-chart-wide,
+.model-chart-square {
+  padding: 18px;
+  overflow-x: auto;
+}
+
+.model-chart-wide canvas,
+.model-chart-square canvas {
+  width: 100%;
+  min-height: 320px;
+}
+
+.model-chart-wide--compact canvas {
+  min-height: 280px;
+}
+
+.model-table {
+  min-width: 760px;
+}
+
 .risk-box {
   border-left: 1px solid var(--line);
   padding-left: 18px;
@@ -429,7 +456,8 @@ th {
   }
 
   .dashboard-grid,
-  .analytics-grid {
+  .analytics-grid,
+  .model-eval-grid {
     grid-template-columns: 1fr;
   }
 

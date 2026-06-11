@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from itertools import combinations
 
 from backend.core.config import Settings, get_settings
-from backend.ml.geometry import between, center, contains_or_overlaps, distance, union_box
+from backend.ml.geometry import between, center, contains_or_overlaps, expand_box, intersects, distance, union_box
 from backend.ml.types import Detection, ProctorEvent, StableTrack
 
 
@@ -26,16 +26,12 @@ class CheatingRuleEngine:
             for detection in detections
             if detection.class_name == "phone" and detection.confidence >= self.settings.alert_confidence_threshold
         ]
-        papers = [
-            detection
-            for detection in detections
-            if detection.class_name == "paper" and detection.confidence >= self.settings.alert_confidence_threshold
-        ]
+        papers = [detection for detection in detections if detection.class_name == "paper" and detection.confidence >= 0.62]
 
         events: list[ProctorEvent] = []
         events.extend(self._phone_usage(now, students, phones))
         events.extend(self._paper_passing(now, students, papers))
-        events.extend(self._suspicious_exchange(now, students, phones, papers, events))
+        events.extend(self._suspicious_exchange(now, students, phones, events))
         return events
 
     def _phone_usage(self, now: datetime, students: list[StableTrack], phones: list[Detection]) -> list[ProctorEvent]:
@@ -64,17 +60,17 @@ class CheatingRuleEngine:
         for paper in papers:
             pairs = []
             for left, right in combinations(students, 2):
-                if not between(paper.bbox, left.bbox, right.bbox, margin=45.0):
+                if not self._paper_in_transfer_zone(paper, left, right):
                     continue
                 pair_distance = distance(left.bbox, right.bbox)
                 interaction_width = max(1.0, union_box(left.bbox, right.bbox)[2] - union_box(left.bbox, right.bbox)[0])
-                if pair_distance > interaction_width * 0.78:
+                if pair_distance > interaction_width * 1.25:
                     continue
                 pairs.append((left, right, pair_distance))
             if not pairs:
                 continue
             source, target, _ = min(pairs, key=lambda item: item[2])
-            confidence = min(0.99, max(paper.confidence, (source.confidence + target.confidence + paper.confidence) / 3.0))
+            confidence = min(0.99, max(0.86, paper.confidence, (source.confidence + target.confidence + paper.confidence) / 3.0))
             if confidence < self.settings.alert_confidence_threshold:
                 continue
             events.append(
@@ -98,14 +94,12 @@ class CheatingRuleEngine:
         now: datetime,
         students: list[StableTrack],
         phones: list[Detection],
-        papers: list[Detection],
         existing_events: list[ProctorEvent],
     ) -> list[ProctorEvent]:
         if existing_events:
             return []
-        objects = phones + papers
         events: list[ProctorEvent] = []
-        for obj in objects:
+        for obj in phones:
             near_students = sorted(
                 [student for student in students if distance(student.bbox, obj.bbox) < 165.0],
                 key=lambda student: distance(student.bbox, obj.bbox),
@@ -131,6 +125,24 @@ class CheatingRuleEngine:
             )
             break
         return events
+
+    @staticmethod
+    def _paper_in_transfer_zone(paper: Detection, left: StableTrack, right: StableTrack) -> bool:
+        pair_box = union_box(left.bbox, right.bbox)
+        zone = expand_box(pair_box, margin_x=55.0, margin_y=0.0)
+        if not intersects(paper.bbox, zone):
+            return False
+
+        px, py = center(paper.bbox)
+        lx, ly = center(left.bbox)
+        rx, ry = center(right.bbox)
+        min_x, max_x = sorted((lx, rx))
+        pair_height = max(1.0, pair_box[3] - pair_box[1])
+        hand_band_top = pair_box[1] + (pair_height * 0.38)
+        hand_band_bottom = pair_box[1] + (pair_height * 0.96)
+        horizontally_between = (min_x - 80.0) <= px <= (max_x + 80.0)
+        in_hand_transfer_band = hand_band_top <= py <= hand_band_bottom
+        return horizontally_between and in_hand_transfer_band and between(paper.bbox, left.bbox, right.bbox, margin=110.0)
 
     @staticmethod
     def _nearest_overlapping_student(detection: Detection, students: list[StableTrack]) -> StableTrack | None:

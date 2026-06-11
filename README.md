@@ -140,6 +140,32 @@ Use the trained model:
 MODEL_WEIGHTS=models/runs/proctorx-yolo/weights/best.pt
 ```
 
+## Model Evaluation Graphs
+
+The dashboard Analytics page includes:
+
+- `ProctorX - Model Training Curves`
+- `Confusion Matrix`
+- `Compare Models`
+
+The demo graph data is stored in:
+
+```text
+models/evaluation/proctorx_metrics.json
+```
+
+After real training, replace those values with your actual validation metrics. To export the same graphs as PNG files for a report:
+
+```powershell
+python scripts/export_model_graphs.py
+```
+
+Output files are written to:
+
+```text
+reports/model_evaluation/
+```
+
 For GPU:
 
 ```powershell

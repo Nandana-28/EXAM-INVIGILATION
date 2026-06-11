@@ -145,13 +145,12 @@ class LockedByteTrack:
                 track
                 for track in self._tracks.values()
                 if track.public_id is None
-                and track.hits >= 4
-                and track.standing_score >= 0.55
-                and track.moving_score >= 0.08
+                and track.hits >= 3
+                and self._is_invigilator_candidate(track)
                 and track.lost_frames == 0
             ]
             if candidates:
-                invigilator = max(candidates, key=lambda item: (item.standing_score + item.moving_score, item.hits))
+                invigilator = max(candidates, key=lambda item: (item.standing_score * 2.0 + item.moving_score, item.hits))
                 self._tracks[invigilator.raw_id] = replace(invigilator, role="invigilator", public_id=1)
                 self._invigilator_raw_id = invigilator.raw_id
 
@@ -160,8 +159,20 @@ class LockedByteTrack:
                 continue
             if track.hits < 5:
                 continue
+            if self._invigilator_raw_id is None and self._looks_standing(track):
+                continue
             self._tracks[raw_id] = replace(track, role="student", public_id=self._next_student_id)
             self._next_student_id += 1
+
+    @staticmethod
+    def _looks_standing(track: StableTrack) -> bool:
+        return track.standing_score >= 0.58
+
+    @staticmethod
+    def _is_invigilator_candidate(track: StableTrack) -> bool:
+        strongly_standing = track.standing_score >= 0.68
+        standing_and_moving = track.standing_score >= 0.52 and track.moving_score >= 0.05
+        return strongly_standing or standing_and_moving
 
     @staticmethod
     def _appearance(frame: np.ndarray, bbox: tuple[float, float, float, float]) -> np.ndarray | None:

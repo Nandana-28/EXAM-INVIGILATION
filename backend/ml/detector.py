@@ -107,15 +107,15 @@ class YOLODetector:
         candidates: list[Detection] = []
         for contour in contours:
             contour_area = cv2.contourArea(contour)
-            if contour_area < frame_area * 0.002 or contour_area > frame_area * 0.10:
+            if contour_area < frame_area * 0.0008 or contour_area > frame_area * 0.12:
                 continue
             x, y, w, h = cv2.boundingRect(contour)
             rect_area = max(1, w * h)
             extent = contour_area / rect_area
             ratio = max(w / max(1, h), h / max(1, w))
-            if extent < 0.62 or ratio > 3.5:
+            if extent < 0.48 or ratio > 4.8:
                 continue
-            confidence = min(0.90, 0.72 + (extent - 0.62) * 0.42)
+            confidence = min(0.91, 0.66 + (extent - 0.48) * 0.50)
             candidates.append(Detection((float(x), float(y), float(x + w), float(y + h)), confidence, "paper"))
         return candidates
 

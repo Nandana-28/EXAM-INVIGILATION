@@ -6,6 +6,8 @@ const alertList = document.getElementById("alertList");
 const riskScores = document.getElementById("riskScores");
 const analyticsNote = document.getElementById("analyticsNote");
 const finalSummary = document.getElementById("finalSummary");
+const modelMetricsNote = document.getElementById("modelMetricsNote");
+const modelCompareTable = document.getElementById("modelCompareTable");
 
 const pageNames = {
   dashboard: "Dashboard",
@@ -16,6 +18,7 @@ const pageNames = {
 };
 
 let finalResultsDrawnFor = null;
+let modelMetricsLoaded = false;
 
 document.getElementById("getStarted").addEventListener("click", () => {
   landing.classList.add("hidden");
@@ -31,6 +34,7 @@ document.querySelectorAll(".nav__item").forEach((button) => {
     pageTitle.textContent = pageNames[page] || "Dashboard";
     if (page === "analytics") {
       refreshResults();
+      loadModelMetrics();
     }
   });
 });
@@ -59,6 +63,9 @@ setupLogFilter("logFilterSecondary", "logDateSecondary", "startTimeSecondary", "
 setDefaultDates();
 drawEmptyGraph(document.getElementById("finalChart"), "Final analytics appear after STOP");
 drawEmptyGraph(document.getElementById("analyticsChart"), "No final results yet");
+drawEmptyGraph(document.getElementById("trainingCurveChart"), "Model training curves");
+drawEmptyGraph(document.getElementById("confusionMatrixChart"), "Confusion matrix");
+drawEmptyGraph(document.getElementById("modelCompareChart"), "Compare models");
 setInterval(loadState, 1600);
 
 async function startLive() {
@@ -81,8 +88,22 @@ async function refreshResults() {
   try {
     const result = await fetchJson("/get_results");
     renderFinalResults(result, true);
+    await loadModelMetrics();
   } catch (error) {
     setStatus(error.message, true);
+  }
+}
+
+async function loadModelMetrics() {
+  if (modelMetricsLoaded) {
+    return;
+  }
+  try {
+    const metrics = await fetchJson("/model_metrics");
+    renderModelMetrics(metrics);
+    modelMetricsLoaded = true;
+  } catch (error) {
+    modelMetricsNote.textContent = "Model metrics are unavailable.";
   }
 }
 
@@ -211,6 +232,239 @@ function drawBarChart(canvas, data, title) {
   ctx.stroke();
 }
 
+function renderModelMetrics(metrics) {
+  modelMetricsNote.textContent = metrics.note || "Model evaluation metrics loaded.";
+  drawTrainingCurves(document.getElementById("trainingCurveChart"), metrics.training_curves);
+  drawConfusionMatrix(document.getElementById("confusionMatrixChart"), metrics.confusion_matrix);
+  drawModelComparison(document.getElementById("modelCompareChart"), metrics.model_comparison);
+  renderModelCompareTable(metrics.model_comparison || []);
+}
+
+function drawTrainingCurves(canvas, curves) {
+  if (!curves || !curves.epochs) {
+    drawEmptyGraph(canvas, "Model training curves unavailable");
+    return;
+  }
+  const series = [
+    { label: "Train Box Loss", values: curves.train_box_loss, color: "#c7423a" },
+    { label: "Val Box Loss", values: curves.val_box_loss, color: "#b97616" },
+    { label: "mAP50", values: curves.map50, color: "#0f7c72" },
+    { label: "Precision", values: curves.precision, color: "#14324a" },
+    { label: "Recall", values: curves.recall, color: "#6d5bd0" },
+  ];
+  drawLineChart(canvas, curves.epochs, series, "ProctorX - Model Training Curves");
+}
+
+function drawLineChart(canvas, labels, series, title) {
+  const ctx = canvas.getContext("2d");
+  const width = canvas.width;
+  const height = canvas.height;
+  const left = 64;
+  const right = width - 28;
+  const top = 56;
+  const bottom = height - 54;
+  ctx.clearRect(0, 0, width, height);
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, width, height);
+  ctx.fillStyle = "#17202a";
+  ctx.font = "800 19px Segoe UI, Arial";
+  ctx.fillText(title, 24, 32);
+
+  const allValues = series.flatMap((item) => item.values || []);
+  const max = Math.max(1, ...allValues);
+  const min = Math.min(0, ...allValues);
+  drawAxes(ctx, left, right, top, bottom);
+
+  labels.forEach((label, index) => {
+    const x = left + (index / Math.max(1, labels.length - 1)) * (right - left);
+    if (index % 2 === 0) {
+      ctx.fillStyle = "#657487";
+      ctx.font = "700 12px Segoe UI, Arial";
+      ctx.fillText(String(label), x - 8, bottom + 24);
+    }
+  });
+
+  series.forEach((item, seriesIndex) => {
+    const values = item.values || [];
+    ctx.strokeStyle = item.color;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    values.forEach((value, index) => {
+      const x = left + (index / Math.max(1, values.length - 1)) * (right - left);
+      const y = bottom - ((value - min) / Math.max(0.01, max - min)) * (bottom - top);
+      if (index === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+    ctx.fillStyle = item.color;
+    ctx.fillRect(26 + seriesIndex * 154, height - 24, 16, 6);
+    ctx.fillStyle = "#17202a";
+    ctx.font = "700 12px Segoe UI, Arial";
+    ctx.fillText(item.label, 48 + seriesIndex * 154, height - 17);
+  });
+}
+
+function drawConfusionMatrix(canvas, confusion) {
+  const labels = confusion?.labels || [];
+  const matrix = confusion?.matrix || [];
+  const ctx = canvas.getContext("2d");
+  const width = canvas.width;
+  const height = canvas.height;
+  ctx.clearRect(0, 0, width, height);
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, width, height);
+  ctx.fillStyle = "#17202a";
+  ctx.font = "800 19px Segoe UI, Arial";
+  ctx.fillText("Confusion Matrix", 24, 32);
+  if (!labels.length || !matrix.length) {
+    ctx.fillText("No matrix data", 24, 74);
+    return;
+  }
+  const size = Math.min(330, width - 210, height - 150);
+  const startX = 170;
+  const startY = 78;
+  const cell = size / labels.length;
+  const maxValue = Math.max(1, ...matrix.flat());
+
+  labels.forEach((label, index) => {
+    ctx.fillStyle = "#17202a";
+    ctx.font = "700 12px Segoe UI, Arial";
+    ctx.fillText(label, 20, startY + index * cell + cell / 2 + 4);
+    ctx.save();
+    ctx.translate(startX + index * cell + cell / 2, startY - 12);
+    ctx.rotate(-Math.PI / 5);
+    ctx.fillText(label, 0, 0);
+    ctx.restore();
+  });
+
+  matrix.forEach((row, rowIndex) => {
+    row.forEach((value, colIndex) => {
+      const intensity = value / maxValue;
+      const color = matrixColor(intensity);
+      const x = startX + colIndex * cell;
+      const y = startY + rowIndex * cell;
+      ctx.fillStyle = color;
+      ctx.fillRect(x, y, cell - 2, cell - 2);
+      ctx.fillStyle = intensity > 0.55 ? "#ffffff" : "#17202a";
+      ctx.font = "800 15px Segoe UI, Arial";
+      ctx.fillText(String(value), x + cell * 0.36, y + cell * 0.56);
+    });
+  });
+  ctx.fillStyle = "#657487";
+  ctx.font = "700 13px Segoe UI, Arial";
+  ctx.fillText("Actual", 24, startY + size + 34);
+  ctx.fillText("Predicted", startX + size / 2 - 30, startY + size + 34);
+}
+
+function drawModelComparison(canvas, models) {
+  const rows = models || [];
+  const data = rows.map((row) => ({
+    label: row.model.replace(" + Locked ByteTrack", ""),
+    values: [row.map50, row.event_f1, row.id_stability],
+  }));
+  drawGroupedBarChart(canvas, data, ["mAP50", "Event F1", "ID Stability"], "Compare Models");
+}
+
+function drawGroupedBarChart(canvas, groups, metrics, title) {
+  const ctx = canvas.getContext("2d");
+  const width = canvas.width;
+  const height = canvas.height;
+  const left = 58;
+  const right = width - 24;
+  const top = 56;
+  const bottom = height - 70;
+  const colors = ["#0f7c72", "#b97616", "#14324a"];
+  ctx.clearRect(0, 0, width, height);
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, width, height);
+  ctx.fillStyle = "#17202a";
+  ctx.font = "800 19px Segoe UI, Arial";
+  ctx.fillText(title, 24, 32);
+  drawAxes(ctx, left, right, top, bottom);
+
+  const groupWidth = (right - left) / Math.max(1, groups.length);
+  const barWidth = Math.min(34, groupWidth / 5);
+  groups.forEach((group, groupIndex) => {
+    const baseX = left + groupIndex * groupWidth + groupWidth * 0.22;
+    group.values.forEach((value, metricIndex) => {
+      const x = baseX + metricIndex * (barWidth + 7);
+      const barHeight = value * (bottom - top);
+      ctx.fillStyle = colors[metricIndex];
+      ctx.fillRect(x, bottom - barHeight, barWidth, barHeight);
+    });
+    ctx.fillStyle = "#17202a";
+    ctx.font = "700 11px Segoe UI, Arial";
+    wrapCanvasText(ctx, group.label, left + groupIndex * groupWidth + 4, bottom + 20, groupWidth - 8, 13);
+  });
+  metrics.forEach((metric, index) => {
+    ctx.fillStyle = colors[index];
+    ctx.fillRect(24 + index * 112, height - 20, 14, 6);
+    ctx.fillStyle = "#17202a";
+    ctx.font = "700 12px Segoe UI, Arial";
+    ctx.fillText(metric, 44 + index * 112, height - 13);
+  });
+}
+
+function renderModelCompareTable(models) {
+  if (!models.length) {
+    modelCompareTable.innerHTML = `<tr><td colspan="7">No model comparison data.</td></tr>`;
+    return;
+  }
+  modelCompareTable.innerHTML = models
+    .map((model) => `<tr>
+      <td>${escapeHtml(model.model)}</td>
+      <td>${percent(model.map50)}</td>
+      <td>${percent(model.precision)}</td>
+      <td>${percent(model.recall)}</td>
+      <td>${percent(model.event_f1)}</td>
+      <td>${percent(model.id_stability)}</td>
+      <td>${model.fps_cpu}</td>
+    </tr>`)
+    .join("");
+}
+
+function drawAxes(ctx, left, right, top, bottom) {
+  ctx.strokeStyle = "#d9e0e8";
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i += 1) {
+    const y = top + (i / 4) * (bottom - top);
+    ctx.beginPath();
+    ctx.moveTo(left, y);
+    ctx.lineTo(right, y);
+    ctx.stroke();
+  }
+  ctx.strokeStyle = "#657487";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(left, top);
+  ctx.lineTo(left, bottom);
+  ctx.lineTo(right, bottom);
+  ctx.stroke();
+}
+
+function matrixColor(intensity) {
+  const low = [235, 242, 240];
+  const high = [15, 124, 114];
+  const mix = low.map((value, index) => Math.round(value + (high[index] - value) * intensity));
+  return `rgb(${mix[0]}, ${mix[1]}, ${mix[2]})`;
+}
+
+function wrapCanvasText(ctx, text, x, y, maxWidth, lineHeight) {
+  const words = String(text).split(" ");
+  let line = "";
+  words.forEach((word) => {
+    const testLine = line ? `${line} ${word}` : word;
+    if (ctx.measureText(testLine).width > maxWidth && line) {
+      ctx.fillText(line, x, y);
+      line = word;
+      y += lineHeight;
+    } else {
+      line = testLine;
+    }
+  });
+  ctx.fillText(line, x, y);
+}
+
 function setupLogFilter(formId, dateId, startId, endId, tableId) {
   document.getElementById(formId).addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -321,6 +575,10 @@ function formatDateTime(value) {
 function capitalize(value) {
   const text = String(value || "");
   return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+function percent(value) {
+  return `${Math.round(Number(value || 0) * 100)}%`;
 }
 
 function escapeHtml(value) {

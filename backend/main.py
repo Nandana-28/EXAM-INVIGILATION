@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import shutil
+import json
 from contextlib import asynccontextmanager
 from datetime import date, time
 from pathlib import Path
@@ -94,6 +95,14 @@ def stop_session() -> ResultsOut:
 @app.get("/get_results", response_model=ResultsOut)
 def get_results() -> ResultsOut:
     return manager.get_results()
+
+
+@app.get("/model_metrics")
+def model_metrics() -> dict:
+    metrics_path = Path("models/evaluation/proctorx_metrics.json")
+    if not metrics_path.exists():
+        raise HTTPException(status_code=404, detail="Model metrics file is not available.")
+    return json.loads(metrics_path.read_text(encoding="utf-8"))
 
 
 @app.get("/get_logs_by_date", response_model=list[AlertOut])

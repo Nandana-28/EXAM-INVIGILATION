@@ -21,10 +21,13 @@ def draw_frame(frame: np.ndarray, tracks: list[StableTrack], detections: list[De
             canvas = apply_paper_heatmap(canvas, event)
 
     for detection in detections:
-        if detection.class_name not in {"phone", "paper"}:
+        if detection.class_name != "phone":
             continue
-        color = AMBER if detection.class_name == "paper" else RED
-        _draw_box(canvas, detection.bbox, color, f"{detection.class_name.title()} {detection.confidence:.0%}", thickness=2)
+        _draw_box(canvas, detection.bbox, RED, f"Phone {detection.confidence:.0%}", thickness=2)
+
+    for event in events:
+        if event.activity_type == "paper_passing" and event.object_bbox is not None:
+            _draw_box(canvas, event.object_bbox, AMBER, f"Paper Passing {event.confidence:.0%}", thickness=2)
 
     for track in tracks:
         color = RED if track.role == "invigilator" else GREEN
