@@ -66,7 +66,7 @@ Additional dashboard endpoints:
 
 | Method | Endpoint | Purpose |
 |---|---|---|
-| `GET` | `/video_feed` | MJPEG stream with boxes, IDs, and heatmaps |
+| `GET` | `/video_feed` | MJPEG stream with boxes , IDs, and heatmaps |
 | `GET` | `/state` | Polling state for alerts and session status |
 | `GET` | `/health` | Service/model health check |
 
